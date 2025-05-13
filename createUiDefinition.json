@@ -1,0 +1,265 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+	"handler": "Microsoft.Azure.CreateUIDef",
+	"version": "0.1.2-preview",
+	"parameters": {
+		"basics": [
+			{}
+		],
+		"steps": [
+			{
+				"name": "ExFlowParameters",
+				"label": "ExFlow settings",
+				"subLabel": {
+					"preValidation": "Configure the ExFlow settings",
+					"postValidation": "Completed"
+				},
+				"elements": [
+					{
+						"name": "ServicePrincipal",
+						"type": "Microsoft.Common.ServicePrincipalSelector",
+						"label": {
+							"password": "Password",
+							"authenticationType": "Authentication Type",
+							"sectionHeader": "Service Principal"
+						},
+						"toolTip": {
+							"password": "Password",
+							"authenticationType": "Authentication Type"
+						},
+						"defaultValue": {
+							"principalId": "<default guid>",
+							"name": "(New) default App Id"
+						},
+						"constraints": {
+							"required": true,
+							"regex": ".*",
+							"validationMessage": "Thisisupdated. A combination of up to 40 characters consisting of letters, digits, and special characters."
+						},
+						"options": {
+							"hideCertificate": true
+						},
+						"visible": true
+					},
+					{
+						"name": "ERPUrl",
+						"type": "Microsoft.Common.TextBox",
+						"label": "ExFlow ERP Url",
+						"placeholder": "ExFlow ERP Url",
+						"defaultValue": "",
+						"toolTip": "URL to the ERP system. Example: https://example.operations.dynamics.com",
+						"constraints": {
+							"required": true,
+							"regex": "^(http(s):\\/\\/.)[-a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&\\/\\/=]*)$",
+							"validationMessage": "has to be a valid URL"
+						},
+						"visible": true
+					},
+					{
+						"name": "TenantId",
+						"type": "Microsoft.Common.TextBox",
+						"label": "TenantId",
+						"placeholder": "TenantId",
+						"defaultValue": "",
+						"toolTip": "Tenant ID where FO is installed. (Guid)",
+						"constraints": {
+							"required": true,
+							"regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+							"validationMessage": "has to be a valid TenantId"
+						},
+						"visible": true
+					},
+					{
+						"name": "ExFlowWebPackageLicense",
+						"type": "Microsoft.Common.TextBox",
+						"label": "ExFlowWebPackageLicense",
+						"placeholder": "ExFlowWebPackageLicense",
+						"defaultValue": "",
+						"toolTip": "Your ExFlow Web Package License that you have recived.",
+						"constraints": {
+							"required": true,
+							"regex": "^[0-9a-fA-F]{32}$",
+							"validationMessage": "has to be a valid ExFlowUserPackageLicense"
+						},
+						"visible": true
+					}					
+				]
+			},
+			{
+				"name": "webAppSettings",
+				"label": "Web App settings",
+				"subLabel": {
+					"preValidation": "Configure the web app settings",
+					"postValidation": "Completed"
+				},
+				"elements": [
+					{
+						"name": "appServicePlanName",
+						"type": "Microsoft.Common.TextBox",
+						"label": "App Service plan name",
+						"placeholder": "App Service plan name",
+						"defaultValue": "",
+						"toolTip": "Use alphanumeric characters or hyphens with a maximum of 40 characters.",
+						"constraints": {
+							"required": true,
+							"regex": "^[a-z0-9A-Z-]{1,40}$",
+							"validationMessage": "Only alphanumeric characters or hyphens are allowed, with a maximum of 40 characters."
+						},
+						"visible": true
+					},
+					{
+						"name": "appServiceName",
+						"type": "Microsoft.Common.TextBox",
+						"label": "App Service name",
+						"placeholder": "App Service name",
+						"defaultValue": "",
+						"toolTip": "Use alphanumeric characters or hyphens with minimum of 2 characters and maximum of 47 characters.",
+						"constraints": {
+							"validations": [
+								{
+									"regex": "^[a-z0-9A-Z-]{2,47}$",
+									"message": "Only alphanumeric characters or hyphens are allowed, with a minimum of 2 characters and maximum of 47 characters."
+								},
+								{
+									"isValid": "[not(equals(steps('webAppSettings').appServiceAvailabilityApi.nameAvailable, false))]",
+									"message": "[concat('Error with the url: ', steps('webAppSettings').appServiceName, '. Reason: ', steps('webAppSettings').appServiceAvailabilityApi.reason)]"
+								},
+								{
+									"isValid": "[not(equals(steps('webAppSettings').appServiceName, steps('webAppSettings').functionAppName))]",
+									"message": "The App Service name cannot be the same as the Function App name. Please choose a different name."
+								}
+							]
+						},
+						"visible": true
+					},
+					{
+						"name": "ExFlowWebStorage",
+						"type": "Microsoft.Storage.StorageAccountSelector",
+						"label": "Storage account creator",
+						"toolTip": "Select or create a storage account for ExFlow Web Storage.",
+						"defaultValue": {
+							"name": "",
+							"type": "Standard_LRS"
+						},
+						"constraints": {
+							"allowedTypes": [],
+							"excludedTypes": []
+						},
+						"options": {
+							"hideExisting": true
+						},
+						"visible": true
+					},
+					{
+						"name": "appServiceAvailabilityApi",
+						"type": "Microsoft.Solutions.ArmApiControl",
+						"request": {
+							"method": "POST",
+							"path": "[concat(subscription().id, '/providers/Microsoft.Web/checknameavailability?api-version=2021-02-01')]",
+							"body": "[parse(concat('{\"name\":\"', concat('', steps('webAppSettings').appServiceName), '\", \"type\": \"Microsoft.Web/sites\"}'))]"
+						}
+					},
+					{
+						"name": "sectionAppService",
+						"type": "Microsoft.Common.Section",
+						"label": "URLs to be created:",
+						"elements": [
+							{
+								"name": "domainExamplePortal",
+								"type": "Microsoft.Common.TextBlock",
+								"visible": true,
+								"options": {
+									"text": "[concat('https://', steps('webAppSettings').appServiceName, '.azurewebsites.net - The main app service URL')]"
+								}
+							}
+						],
+						"visible": true
+					},
+					{
+						"name": "functionAppName",
+						"type": "Microsoft.Common.TextBox",
+						"label": "Function App name",
+						"placeholder": "Function App name",
+						"defaultValue": "",
+						"toolTip": "Use alphanumeric characters or hyphens with minimum of 2 characters and maximum of 47 characters.",
+						"constraints": {
+							"validations": [
+								{
+									"regex": "^[a-z0-9A-Z-]{2,47}$",
+									"message": "Only alphanumeric characters or hyphens are allowed, with a minimum of 2 characters and maximum of 47 characters."
+								},
+								{
+									"isValid": "[not(equals(steps('webAppSettings').FunctionAppAvailabilityApi.nameAvailable, false))]",
+									"message": "[concat('Error with the url: ', steps('webAppSettings').functionAppName, '. Reason: ', steps('webAppSettings').FunctionAppAvailabilityApi.reason)]"
+								},
+								{
+									"isValid": "[not(equals(steps('webAppSettings').functionAppName, steps('webAppSettings').appServiceName))]",
+									"message": "The Function App name cannot be the same as the App Service name. Please choose a different name."
+								}
+							]
+						},
+						"visible": true
+					},
+					{
+						"name": "FunctionAppStorage",
+						"type": "Microsoft.Storage.StorageAccountSelector",
+						"label": "Storage account creator",
+						"toolTip": "Select or create a storage account for Function App Storage.",
+						"defaultValue": {
+							"name": "",
+							"type": "Standard_LRS"
+						},
+						"constraints": {
+							"allowedTypes": [],
+							"excludedTypes": []
+						},
+						"options": {
+							"hideExisting": true
+						},
+						"visible": true
+					},
+					{
+						"name": "FunctionAppAvailabilityApi",
+						"type": "Microsoft.Solutions.ArmApiControl",
+						"request": {
+							"method": "POST",
+							"path": "[concat(subscription().id, '/providers/Microsoft.Web/checknameavailability?api-version=2021-02-01')]",
+							"body": "[parse(concat('{\"name\":\"', concat('', steps('webAppSettings').functionAppName), '\", \"type\": \"Microsoft.Web/sites\"}'))]"
+						}
+					},
+					{
+						"name": "sectionFunctionApp",
+						"type": "Microsoft.Common.Section",
+						"label": "URLs to be created:",
+						"elements": [
+							{
+								"name": "domainExamplePortal",
+								"type": "Microsoft.Common.TextBlock",
+								"visible": true,
+								"options": {
+									"text": "[concat('https://', steps('webAppSettings').functionAppName, '.azurewebsites.net - The function app service URL')]"
+								}
+							}
+						],
+						"visible": true
+					}
+				]
+			}
+		],
+		"outputs": {
+			"location": "[location()]",
+			"ClientId": "[steps('ExFlowParameters').ServicePrincipal.appId]",
+			"password": "[steps('ExFlowParameters').ServicePrincipal.password]",
+			"ERPUrl": "[steps('ExFlowParameters').ERPUrl]",
+			"TenantId": "[steps('ExFlowParameters').TenantId]",
+			"ExFlowWebPackageLicense": "[steps('ExFlowParameters').ExFlowWebPackageLicense]",
+			"appServicePlanName": "[steps('webAppSettings').appServicePlanName]",
+			"appServiceName": "[steps('webAppSettings').appServiceName]",
+			"storageAccountName": "[steps('webAppSettings').ExFlowWebStorage.name]",
+			"storageAccountType": "[steps('webAppSettings').ExFlowWebStorage.type]",
+			"functionAppName": "[steps('webAppSettings').functionAppName]",
+			"functionAppStor": "[steps('webAppSettings').FunctionAppStorage.name]",
+			"functionAppStorType": "[steps('webAppSettings').FunctionAppStorage.type]"
+		}
+	}
+}
